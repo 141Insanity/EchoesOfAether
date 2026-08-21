@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.3</title>
+<title>Echoes of Aether v0.7.4</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -65,7 +65,7 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.3 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.4 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -332,6 +332,61 @@ function openCodex(){let ids=HB.map(x=>x.id);let html=`<div class="card modalcar
 
 
 S.skillDust=S.skillDust||250;S.skillLevels=S.skillLevels||{};S.codexMilestones=S.codexMilestones||{Heroes:{},Equipment:{},Enemies:{}};
+
+function ensureSkillLoadout(id){
+ let o=heroObj(id),pool=heroSkillPool(id),max=loadoutSlotsFor(o.rarity);
+ let act=pool.filter(s=>s.type==='Active').slice(0,max);
+ if(!S.skillLoadouts)S.skillLoadouts={};
+ if(!S.skillLoadouts[id]){
+  S.skillLoadouts[id]={
+   active:act.map(s=>s.id),
+   ultimate:(pool.find(s=>s.type==='Ultimate')||{}).id||null,
+   passive:(pool.find(s=>s.type==='Passive')||{}).id||null,
+   reaction:(pool.find(s=>s.type==='Reaction')||{}).id||null
+  };
+ }
+ // Repair old/incomplete saves.
+ let l=S.skillLoadouts[id];
+ l.active=(l.active||[]).filter(x=>skillById(x)).slice(0,max);
+ for(let s of act)if(l.active.length<max&&!l.active.includes(s.id))l.active.push(s.id);
+ if(!l.ultimate)l.ultimate=(pool.find(s=>s.type==='Ultimate')||{}).id||null;
+ if(!l.passive)l.passive=(pool.find(s=>s.type==='Passive')||{}).id||null;
+ if(!l.reaction)l.reaction=(pool.find(s=>s.type==='Reaction')||{}).id||null;
+ return l;
+}
+function heroSkillPool(id){
+ let b=baseHero(id);
+ return [...(HERO_SKILLS[id]||[]),...((CLASS_SKILLS&&CLASS_SKILLS[b.cls])||[])];
+}
+function loadoutSlotsFor(rarity){
+ let r=ri(rarity);
+ return r>=7?4:r>=3?3:2;
+}
+function moveSkillPriority(id,skillId,dir){
+ let l=ensureSkillLoadout(id),i=l.active.indexOf(skillId),j=i+dir;
+ if(i<0||j<0||j>=l.active.length)return;
+ [l.active[i],l.active[j]]=[l.active[j],l.active[i]];
+ save();openSkillLoadout(id);
+}
+function toggleSkillEquip(id,skillId){
+ let l=ensureSkillLoadout(id),max=loadoutSlotsFor(heroObj(id).rarity),i=l.active.indexOf(skillId);
+ if(i>=0)l.active.splice(i,1);
+ else if(l.active.length<max)l.active.push(skillId);
+ save();openSkillLoadout(id);
+}
+function autoPriority(id){
+ let l=ensureSkillLoadout(id);
+ l.active.sort((a,b)=>(skillById(a)?.priority||9)-(skillById(b)?.priority||9));
+ save();openSkillLoadout(id);
+}
+
+
+function skillById(id){
+ for(let k of Object.keys(HERO_SKILLS||{}))for(let s of HERO_SKILLS[k])if(s.id===id)return s;
+ for(let k of Object.keys(CLASS_SKILLS||{}))for(let s of CLASS_SKILLS[k])if(s.id===id)return s;
+ return null;
+}
+
 function skillLevel(id){return S.skillLevels[id]||1}
 function testSkillLoadout(id){if(typeof HERO_SKILLS==='undefined')return alert('Skill data failed to load.');openSkillLoadout(id)}
 
