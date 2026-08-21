@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.4</title>
+<title>Echoes of Aether v0.7.5</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -65,7 +65,7 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.4 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.5 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -354,9 +354,33 @@ function ensureSkillLoadout(id){
  if(!l.reaction)l.reaction=(pool.find(s=>s.type==='Reaction')||{}).id||null;
  return l;
 }
+
+const CLASS_SKILLS={
+ Warrior:[
+  {id:'w_power',name:'Power Strike',type:'Active',cd:2,priority:2,tags:['Melee','Physical'],desc:'A heavy generic strike.',mult:1.35},
+  {id:'w_brace',name:'Brace',type:'Active',cd:3,priority:1,tags:['Guard','Block'],desc:'Increase Block Strength for one action.',mult:0}
+ ],
+ Rogue:[
+  {id:'r_feint',name:'Feint',type:'Active',cd:3,priority:2,tags:['Melee','Evasion'],desc:'Attack and raise Evasion.',mult:1.0},
+  {id:'r_bleed',name:'Bloodletting',type:'Active',cd:3,priority:1,tags:['Melee','Bleed'],desc:'Adds Bleed buildup.',mult:1.0,status:'Bleed',buildup:26}
+ ],
+ Ranger:[
+  {id:'ra_mark',name:'Hunter Mark',type:'Active',cd:3,priority:1,tags:['Ranged','WeakPoint'],desc:'Expose a Weak Point.',mult:.85},
+  {id:'ra_pin',name:'Pinning Shot',type:'Active',cd:3,priority:2,tags:['Ranged','Stagger'],desc:'Adds Stagger buildup.',mult:1.1,status:'Stagger',buildup:22}
+ ],
+ Mage:[
+  {id:'ma_bolt',name:'Mana Bolt',type:'Active',cd:1,priority:2,tags:['Magic'],desc:'Efficient generic spell.',mult:1.0,mp:8},
+  {id:'ma_focus',name:'Meditate',type:'Active',cd:5,priority:1,tags:['Mana'],desc:'Restore Mana when low.',mult:0,condition:'lowmana'}
+ ],
+ Cleric:[
+  {id:'c_mend',name:'Lesser Mend',type:'Active',cd:2,priority:1,tags:['Heal'],desc:'Heal an injured ally.',heal:.2,condition:'ally75'},
+  {id:'c_smite',name:'Smite',type:'Active',cd:2,priority:2,tags:['Magic','Faith'],desc:'Offensive fallback that generates Faith.',mult:1.0}
+ ]
+};
+
 function heroSkillPool(id){
  let b=baseHero(id);
- return [...(HERO_SKILLS[id]||[]),...((CLASS_SKILLS&&CLASS_SKILLS[b.cls])||[])];
+ return [...((typeof HERO_SKILLS!=='undefined'&&HERO_SKILLS[id])||[]),...((typeof CLASS_SKILLS!=='undefined'&&CLASS_SKILLS[b.cls])||[])];
 }
 function loadoutSlotsFor(rarity){
  let r=ri(rarity);
@@ -382,13 +406,13 @@ function autoPriority(id){
 
 
 function skillById(id){
- for(let k of Object.keys(HERO_SKILLS||{}))for(let s of HERO_SKILLS[k])if(s.id===id)return s;
- for(let k of Object.keys(CLASS_SKILLS||{}))for(let s of CLASS_SKILLS[k])if(s.id===id)return s;
+ for(let k of Object.keys((typeof HERO_SKILLS!=='undefined'&&HERO_SKILLS)||{}))for(let s of HERO_SKILLS[k])if(s.id===id)return s;
+ for(let k of Object.keys((typeof CLASS_SKILLS!=='undefined'&&CLASS_SKILLS)||{}))for(let s of CLASS_SKILLS[k])if(s.id===id)return s;
  return null;
 }
 
 function skillLevel(id){return S.skillLevels[id]||1}
-function testSkillLoadout(id){if(typeof HERO_SKILLS==='undefined')return alert('Skill data failed to load.');openSkillLoadout(id)}
+function testSkillLoadout(id){if(typeof HERO_SKILLS==='undefined')return alert('Skill data failed to load: HERO_SKILLS missing.');if(typeof CLASS_SKILLS==='undefined')return alert('Skill data failed to load: CLASS_SKILLS missing.');openSkillLoadout(id)}
 
 function skillUpgradeCost(id){let l=skillLevel(id);return{gold:150*l*l,dust:5+l*3}}
 function skillScaled(s){let l=skillLevel(s.id),x={...s},m=1+.055*(l-1)+(l>=5?.08:0)+(l>=10?.12:0);if(x.mult)x.mult=Math.round(x.mult*m*100)/100;if(x.heal)x.heal=Math.round(x.heal*m*1000)/1000;if(x.buildup)x.buildup=Math.round(x.buildup*m);x.milestone=l>=10?'Lv.10 Mastery':l>=5?'Lv.5 Breakthrough':'';return x}
