@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.11</title>
+<title>Echoes of Aether v0.7.12</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -101,12 +101,40 @@ button,.btn,.building,.gear,.skillBubble,.formcell{
 .skillDragGhost{position:fixed!important;z-index:9999!important;width:70px!important;height:70px!important;border-radius:50%!important;pointer-events:none!important;transform:translate(-50%,-50%) scale(1.08);opacity:.95;box-shadow:0 10px 28px #000c,0 0 0 4px #e9a93366;transition:none!important}
 .skillBubble.dragSource{opacity:.25!important;transform:scale(.92)!important}
 .skillBubble.dropTarget{transform:scale(1.08)!important;box-shadow:0 0 0 4px #e9a93355,0 4px 12px #0007!important}
+
+.heroPageModal{
+  width:min(96vw,760px)!important;
+  max-height:calc(100dvh - 150px)!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-top:14px!important;
+}
+.heroPageHeader{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding-right:42px;
+  margin-bottom:8px;
+}
+.heroOverviewActions{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  margin-top:7px;
+}
+.heroOverviewActions .btn{
+  min-height:44px;
+}
+.heroPageSection{
+  margin-top:7px;
+}
 </style>
 </head>
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.11 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.12 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -263,12 +291,12 @@ function addGateXP(t,n){let g=gateState(t);g.xp+=n;while(g.level<8&&g.xp>=gateNe
 function rollGateRarity(t){let g=gateState(t),a=[...gateRates(t)];if(g.pity>=140){g.pity=0;return'God'}let soft=Math.min(6,Math.max(0,g.pity-70)*.08);a[7]+=soft;for(let i=0;i<7&&soft>0;i++){let x=Math.min(a[i],soft);a[i]-=x;soft-=x}let p=Math.random()*100,c=0;for(let i=0;i<a.length;i++){c+=a[i];if(p<c){if(i===7)g.pity=0;else g.pity++;return RS[i]}}g.pity++;return'World'}
 function showStat(n,i){
  let s=heroStats(i),v={'HP':s.hp,'ATK':s.atk,'DEF':s.def,'SPD':s.spd,'Crit Rate':s.critRate.toFixed(1)+'%','Crit Damage':s.critDamage.toFixed(1)+'%','Crit Resistance':s.critResistance.toFixed(1),'Crit Defense':s.critDefense.toFixed(1),'Precision':s.precision.toFixed(1),'Evasion':s.evasion.toFixed(1),'Resistance':s.resistance.toFixed(1)};
- let html=`<div class="card modalcard"><button class="modalx" onclick="modalXBack()">✕</button><h2>${n}</h2><div class="big">${v[n]}</div><p class="mut">${STAT_INFO[n]}</p>${n==='DEF'?`<div class="tiny">Estimated equal-level mitigation ${(defenseReduction(s.def,s.level)*100).toFixed(1)}%</div>`:''}</div>`;
+ let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="modalXBack()">✕</button><h2>${n}</h2><div class="big">${v[n]}</div><p class="mut">${STAT_INFO[n]}</p>${n==='DEF'?`<div class="tiny">Estimated equal-level mitigation ${(defenseReduction(s.def,s.level)*100).toFixed(1)}%</div>`:''}</div>`;
  pushModal(html);
 }
 function fullStats(i){
  let s=heroStats(i),v=[['HP',s.hp],['ATK',s.atk],['DEF',s.def],['SPD',s.spd],['Crit Rate',s.critRate.toFixed(1)+'%'],['Crit Damage',s.critDamage.toFixed(1)+'%'],['Crit Resistance',s.critResistance.toFixed(1)],['Crit Defense',s.critDefense.toFixed(1)],['Precision',s.precision.toFixed(1)],['Evasion',s.evasion.toFixed(1)],['Resistance',s.resistance.toFixed(1)]];
- let html=`<div class="card modalcard"><button class="modalx" onclick="modalXClose()">✕</button><h2>${s.name} • Full Stats</h2><div class="grid2" style="margin-top:6px">${v.map(a=>`<button class="btn" onclick="showStat('${a[0]}',${i})"><b>${a[0]}</b><br>${a[1]}</button>`).join('')}</div><div class="tiny" style="margin-top:7px">Tap any stat for an explanation.</div></div>`;
+ let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="modalXClose()">✕</button><div class="heroPageHeader"><div class="ico">${s.icon||'📊'}</div><div><h2>${s.name} • Stats</h2><div class="mut">Active Slot ${i+1} • Lv.${S.party[i].level}</div></div></div><div class="grid2" style="margin-top:6px">${v.map(a=>`<button class="btn" onclick="showStat('${a[0]}',${i})"><b>${a[0]}</b><br>${a[1]}</button>`).join('')}</div><div class="tiny" style="margin-top:7px">Tap any stat for an explanation.</div></div>`;
  S.modalStack=[];pushModal(html);
 }
 
@@ -616,11 +644,11 @@ function skillMechanicalText(x){
 function openSkillDetail(hero,sid){
  let s=skillById(sid);if(!s)return;let z=scaledWithGear(hero,s),x=z.x,lv=skillLevel(s.id),c=skillUpgradeCost(s.id),l=repairSkillLoadout(hero),eq=l.active.includes(s.id);
  let values=[];if(x.mult)values.push(['Power',Math.round(x.mult*100)+'%']);if(x.heal)values.push(['Healing',Math.round(x.heal*100)+'%']);if(x.buildup)values.push(['Buildup',x.buildup]);if(x.mp)values.push(['Mana',x.mp]);if(x.cd)values.push(['Cooldown',x.cd+' actions']);
- let html=`<div class="card modalcard"><button class="modalx" onclick="openSkillLoadout('${hero}')">✕</button><div style="text-align:center"><div class="skillBubble special" style="margin:auto">${skillIcon(s)}<span class="lvl">Lv.${lv}</span></div><h2 style="margin-top:12px">${s.name}</h2><div>${(s.tags||[]).map(t=>`<span class="skilltag">${t}</span>`).join(' ')}</div></div><p class="mut">${skillMechanicalText(x)||s.desc}</p><div class="tiny">${s.desc}</div><div class="skillDetailStats">${values.map(v=>`<div class="skillDetailStat"><b>${v[1]}</b><br><span class="tiny">${v[0]}</span></div>`).join('')}</div>${z.mods.length?`<div class="card"><b>Equipment Modifier</b><div class="sigfx">${z.mods.join('<br>')}</div></div>`:''}${x.milestone?`<div class="card"><b>${x.milestone}</b><div class="tiny">Milestone bonus active.</div></div>`:''}<div class="tiny" style="margin-top:7px">${lv>=10?'MAX LEVEL':'Upgrade: '+c.gold+' gold • '+c.dust+' Skill Dust'}</div><div class="row" style="margin-top:6px">${s.type==='Active'?`<button class="btn" onclick="toggleSkillEquip('${hero}','${s.id}')">${eq?'UNEQUIP':'EQUIP'}</button>`:''}<button class="btn primary" ${lv>=10?'disabled':''} onclick="upgradeSkill('${s.id}','${hero}')">${lv>=10?'MAX':'UPGRADE'}</button></div></div>`;
+ let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="openSkillLoadout('${hero}')">✕</button><div style="text-align:center"><div class="skillBubble special" style="margin:auto">${skillIcon(s)}<span class="lvl">Lv.${lv}</span></div><h2 style="margin-top:12px">${s.name}</h2><div>${(s.tags||[]).map(t=>`<span class="skilltag">${t}</span>`).join(' ')}</div></div><p class="mut">${skillMechanicalText(x)||s.desc}</p><div class="tiny">${s.desc}</div><div class="skillDetailStats">${values.map(v=>`<div class="skillDetailStat"><b>${v[1]}</b><br><span class="tiny">${v[0]}</span></div>`).join('')}</div>${z.mods.length?`<div class="card"><b>Equipment Modifier</b><div class="sigfx">${z.mods.join('<br>')}</div></div>`:''}${x.milestone?`<div class="card"><b>${x.milestone}</b><div class="tiny">Milestone bonus active.</div></div>`:''}<div class="tiny" style="margin-top:7px">${lv>=10?'MAX LEVEL':'Upgrade: '+c.gold+' gold • '+c.dust+' Skill Dust'}</div><div class="row" style="margin-top:6px">${s.type==='Active'?`<button class="btn" onclick="toggleSkillEquip('${hero}','${s.id}')">${eq?'UNEQUIP':'EQUIP'}</button>`:''}<button class="btn primary" ${lv>=10?'disabled':''} onclick="upgradeSkill('${s.id}','${hero}')">${lv>=10?'MAX':'UPGRADE'}</button></div></div>`;
  S.modalStack=[];pushModal(html);
 }
 
-function openSkillLoadout(id){try{let b=baseHero(id),o=heroObj(id),l=repairSkillLoadout(id),pool=heroSkillPool(id),max=loadoutSlotsFor(o.rarity),act=pool.filter(s=>s.type==='Active'),feat=rarityFeatures(o.rarity),ult=feat.ultimate?skillById(l.ultimate):null,pas=feat.passive?skillById(l.passive):null,react=feat.reaction?skillById(l.reaction):null;let html=`<div class="card modalcard"><button class="modalx" onclick="modalXClose()">✕</button><h2>${b.icon} ${b.name} • Skills</h2><div class="mut">${l.active.length}/${max} Active Slots • Skill Dust ${S.skillDust}</div><div class="card" style="margin-top:6px"><b>Equipped Skills</b><div class="tiny">Tap for details • long-hold and drag to change priority.</div><div class="skillLoadoutTop">${l.active.map((sid,i)=>skillBubbleHTML(id,skillById(sid),true,i)).join('')}${Array.from({length:Math.max(0,max-l.active.length)},()=>`<div class="skillBubbleWrap"><div class="skillBubble" style="opacity:.35">＋</div><div class="skillBubbleName">Empty</div></div>`).join('')}</div></div><div class="card" style="margin-top:6px"><b>Special Slots</b><div class="skillSpecials"><div class="skillSocket"><span class="tiny">ULTIMATE</span>${ult?skillBubbleHTML(id,ult):'<div class="mut">Locked</div>'}</div><div class="skillSocket"><span class="tiny">PASSIVE</span>${pas?skillBubbleHTML(id,pas):'<div class="mut">None</div>'}</div><div class="skillSocket"><span class="tiny">REACTION</span>${react?skillBubbleHTML(id,react):'<div class="mut">None</div>'}</div></div></div><div class="card" style="margin-top:6px"><b>Skill Pool</b><div class="skillPoolGrid">${act.map(s=>skillBubbleHTML(id,s,l.active.includes(s.id))).join('')}</div></div></div>`;S.modalStack=[];pushModal(html)}catch(err){console.error('Skill Loadout',err);alert('Skill Loadout error: '+err.message)}}
+function openSkillLoadout(id){try{let b=baseHero(id),o=heroObj(id),l=repairSkillLoadout(id),pool=heroSkillPool(id),max=loadoutSlotsFor(o.rarity),act=pool.filter(s=>s.type==='Active'),feat=rarityFeatures(o.rarity),ult=feat.ultimate?skillById(l.ultimate):null,pas=feat.passive?skillById(l.passive):null,react=feat.reaction?skillById(l.reaction):null;let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="modalXClose()">✕</button><h2>${b.icon} ${b.name} • Skills</h2><div class="mut">${l.active.length}/${max} Active Slots • Skill Dust ${S.skillDust}</div><div class="card" style="margin-top:6px"><b>Equipped Skills</b><div class="tiny">Tap for details • long-hold and drag to change priority.</div><div class="skillLoadoutTop">${l.active.map((sid,i)=>skillBubbleHTML(id,skillById(sid),true,i)).join('')}${Array.from({length:Math.max(0,max-l.active.length)},()=>`<div class="skillBubbleWrap"><div class="skillBubble" style="opacity:.35">＋</div><div class="skillBubbleName">Empty</div></div>`).join('')}</div></div><div class="card" style="margin-top:6px"><b>Special Slots</b><div class="skillSpecials"><div class="skillSocket"><span class="tiny">ULTIMATE</span>${ult?skillBubbleHTML(id,ult):'<div class="mut">Locked</div>'}</div><div class="skillSocket"><span class="tiny">PASSIVE</span>${pas?skillBubbleHTML(id,pas):'<div class="mut">None</div>'}</div><div class="skillSocket"><span class="tiny">REACTION</span>${react?skillBubbleHTML(id,react):'<div class="mut">None</div>'}</div></div></div><div class="card" style="margin-top:6px"><b>Skill Pool</b><div class="skillPoolGrid">${act.map(s=>skillBubbleHTML(id,s,l.active.includes(s.id))).join('')}</div></div></div>`;S.modalStack=[];pushModal(html)}catch(err){console.error('Skill Loadout',err);alert('Skill Loadout error: '+err.message)}}
 function stIcon(t){return t==='Bleed'?'🩸':t==='Poison'?'☠️':t==='Burn'?'🔥':'💫'}
 function stNeed(t){return t==='Poison'?110:t==='Stagger'?120:100}
 function addBuildup(e,t,a){e.buildup=e.buildup||{};e.buildup[t]=(e.buildup[t]||0)+a;if(e.buildup[t]>=stNeed(t)){e.buildup[t]=0;if(t==='Bleed'){let d=Math.max(1,Math.floor(e.max*.035));e.hp=Math.max(0,e.hp-d);return`HEMORRHAGE! ${d}`};if(t==='Poison'){e.poison=Math.min(3,(e.poison||0)+1);return`TOXICITY ${e.poison}`};if(t==='Burn'){let d=Math.max(1,Math.floor(e.max*.025));e.hp=Math.max(0,e.hp-d);return`IGNITE! ${d}`};if(t==='Stagger'){e.delay=(e.delay||0)+30;return'BREAK!'}}return''}
@@ -905,7 +933,7 @@ function openEquip(slot){
  else if(S.filters.sort==='ATK')choices.sort((a,b)=>gearPower(b.item,ps.equipLv[slot]).atk-gearPower(a.item,ps.equipLv[slot]).atk);
  else if(S.filters.sort==='DEF')choices.sort((a,b)=>gearPower(b.item,ps.equipLv[slot]).def-gearPower(a.item,ps.equipLv[slot]).def);
 
- let html=`<div class="card modalcard"><button class="modalx" onclick="modalXClose()">✕</button><h2>${slot} • ${hero.name}</h2>
+ let html=`<div class="card modalcard"><button class="modalx" onclick="modalXBack()">✕</button><h2>${slot} • ${hero.name}</h2>
  <div class="filterbar">
   <select onchange="setFilter('rarity',this.value)"><option ${S.filters.rarity==='All'?'selected':''}>All</option>${RS.map(r=>`<option ${S.filters.rarity===r?'selected':''}>${r}</option>`).join('')}</select>
   <select onchange="setFilter('compat',this.value)"><option ${S.filters.compat==='Compatible'?'selected':''}>Compatible</option><option ${S.filters.compat==='All Gear'?'selected':''}>All Gear</option></select>
@@ -980,13 +1008,58 @@ function renderBattle(){
  <div class="partyBattle">${heroes.map(u=>`<div class="unit ${u.hp<=0?'ko':''}"><b>${u.icon} ${u.name}</b><div class="progress hp"><i style="width:${u.hp/u.max*100}%"></i></div><div class="progress res"><i style="width:${u.res}%"></i></div><div class="tiny">${u.hp}/${u.max} • ${u.resName} ${u.res}</div></div>`).join('')}</div>
  <div class="card"><div class="log">${S.battle.log.map(x=>'› '+x).join('<br>')}</div>${S.battle.over?`<div class="row" style="margin-top:5px"><button class="btn primary" onclick="S.battle=null;save();startBattle()">NEXT</button><button class="btn" onclick="S.battle=null;save();renderBattle()">LEAVE</button></div>`:a&&a.type==='hero'?`<div class="tiny" style="margin:4px 0">${a.name}'s turn</div><div class="actions"><button class="btn" onclick="heroAct('basic')">⚔️ Basic</button><button class="btn" onclick="heroAct('skill')">🔥 Skill</button><button class="btn" onclick="heroAct('defend')">🛡️ Defend</button><button class="btn" ${ri(a.rarity)<4?'disabled':''} onclick="heroAct('ult')">✨ Ultimate</button></div>`:'<div class="tiny">Enemy acting...</div>'}</div>`;
 }
+
+function heroPageBase(id){
+ let b=baseHero(id),o=heroObj(id),found=S.party.findIndex(p=>p.hero===id);
+ return{b,o,found,active:found>=0};
+}
+function openHeroStatsPage(id){
+ let x=heroPageBase(id);
+ if(x.active){fullStats(x.found);return}
+ let b=x.b,o=x.o;
+ let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="modalXClose()">✕</button>
+ <div class="heroPageHeader"><div class="ico">${b.icon}</div><div><h2>${b.name} • Stats</h2><div class="mut">${b.cls} • <span class="rarity ${o.rarity}">${o.rarity}</span> • Reserve</div></div></div>
+ <div class="card"><div class="mut">Reserve heroes inherit their active-slot training level when swapped into the party.</div><div class="tiny" style="margin-top:6px">Native base: HP ${b.hp||'-'} • ATK ${b.atk||'-'} • DEF ${b.def||'-'} • SPD ${b.spd||'-'}</div></div></div>`;
+ S.modalStack=[];pushModal(html);
+}
+function openHeroSkillsPage(id){
+ S.modalStack=[];
+ openSkillLoadout(id);
+}
+function openHeroEquipmentPage(id){
+ let x=heroPageBase(id),b=x.b,o=x.o;
+ if(!x.active){
+  let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="modalXClose()">✕</button>
+  <div class="heroPageHeader"><div class="ico">${b.icon}</div><div><h2>${b.name} • Equipment</h2><div class="mut">${b.cls} • <span class="rarity ${o.rarity}">${o.rarity}</span> • Reserve</div></div></div>
+  <div class="card"><div class="mut">Swap this hero into an active slot to equip and level gear.</div></div></div>`;
+  S.modalStack=[];pushModal(html);return;
+ }
+ S.selectedParty=x.found;
+ let html=`<div class="card modalcard heroPageModal"><button class="modalx" onclick="modalXClose()">✕</button>
+ <div class="heroPageHeader"><div class="ico">${b.icon}</div><div><h2>${b.name} • Equipment</h2><div class="mut">${b.cls} • Active Slot ${x.found+1} • Lv.${S.party[x.found].level}</div></div></div>
+ <div class="heroPageSection">${equipmentPanelHTML(x.found)}</div></div>`;
+ S.modalStack=[];pushModal(html);
+}
+
 function renderHeroes(){
- let id=S.heroView.id||'mc';if(!baseHero(id))id='mc';let b=baseHero(id),o=heroObj(id),found=S.party.findIndex(p=>p.hero===id),active=found>=0,content='';
- if(S.heroView.tab==='Stats'){if(active){let s=heroStats(found);content=`<b>HP ${s.hp}</b> • ATK ${s.atk} • DEF ${s.def} • SPD ${s.spd}<br><span class="tiny">Crit ${s.critRate.toFixed(1)}% • Crit DMG ${s.critDamage.toFixed(1)}%<br>Crit RES ${s.critResistance.toFixed(1)} • Crit DEF ${s.critDefense.toFixed(1)}<br>Precision ${s.precision.toFixed(1)} • Evasion ${s.evasion.toFixed(1)} • Resistance ${s.resistance.toFixed(1)}<br>Training Slot Lv.${S.party[found].level}</span>`}else content=`Reserve hero • Native ${b.native} • Swap in to inherit a training-slot level.`}
- else if(S.heroView.tab==='Skills'){let l=ensureLoadout(id);content=`${CLASS[b.cls].desc}<br><b>Active:</b> ${l.active.map(x=>skillObj(x).n).join(' • ')||'None'}<button class="btn primary" style="width:100%;margin-top:6px" onclick="testSkillLoadout('${id}')">EDIT SKILL LOADOUT</button>`}
- else content=active?equipmentPanelHTML(found):'Swap this hero into an active slot to equip and level gear.';
- E('heroes').innerHTML=`<div class="card"><div class="mut">ACTIVE PARTY</div><div class="heroCards" style="margin-top:5px">${S.party.map((ps,i)=>{let hb=baseHero(ps.hero),hs=heroStats(i);return`<button class="heroCard" onclick="openHeroDetail('${ps.hero}')"><div class="ico">${hb.icon}</div>${hb.name}<br><span class="rarity ${heroObj(ps.hero).rarity}">${heroObj(ps.hero).rarity}</span><br>Lv.${ps.level}</button>`}).join('')}</div><button class="btn" style="width:100%;margin-top:5px" onclick="openFormation()">FORMATION</button></div>
- <div class="card heroDetailCard"><h2>${b.icon} ${b.name} <span class="rarity ${o.rarity}">${o.rarity}</span></h2><div class="mut">${b.cls} • ${active?'Active Slot '+(found+1)+' • Lv.'+S.party[found].level:'Reserve'}</div><div class="subtabs"><button onclick="setHeroTab('Stats')">Stats</button><button onclick="setHeroTab('Skills')">Skills</button><button onclick="setHeroTab('Equipment')">Equipment</button></div><div class="card" style="margin-top:5px"><div class="tiny">${content}</div>${active&&S.heroView.tab==="Stats"?`<button class="btn primary" style="width:100%;margin-top:6px" onclick="fullStats(${found})">VIEW FULL STATS</button>`:""}</div><div class="row" style="margin-top:5px"><button class="btn gold" onclick="ascendHero('${id}')">ASCEND</button><button class="btn primary" ${id==='mc'?'disabled':''} onclick="swapFromDetail('${id}')">SWAP</button></div><div style="display:none"></div></div>
+ let id=S.heroView.id||'mc';if(!baseHero(id))id='mc';
+ let b=baseHero(id),o=heroObj(id),found=S.party.findIndex(p=>p.hero===id),active=found>=0;
+ let summary='';
+ if(active){
+   let st=heroStats(found);
+   summary=`<b>HP ${st.hp}</b> • ATK ${st.atk} • DEF ${st.def} • SPD ${st.spd}<br><span class="tiny">Crit ${st.critRate.toFixed(1)}% • Crit DMG ${st.critDamage.toFixed(1)}% • Training Slot Lv.${S.party[found].level}</span>`;
+ }else{
+   summary=`Reserve hero • Native ${b.native}<br><span class="tiny">Swap into an active slot to inherit that slot's training and equipment levels.</span>`;
+ }
+ E('heroes').innerHTML=`<div class="card"><div class="mut">ACTIVE PARTY</div><div class="heroCards" style="margin-top:5px">${S.party.map((ps,i)=>{let hb=baseHero(ps.hero);return`<button class="heroCard" onclick="openHeroDetail('${ps.hero}')"><div class="ico">${hb.icon}</div>${hb.name}<br><span class="rarity ${heroObj(ps.hero).rarity}">${heroObj(ps.hero).rarity}</span><br>Lv.${ps.level}</button>`}).join('')}</div><button class="btn" style="width:100%;margin-top:5px" onclick="openFormation()">FORMATION</button></div>
+ <div class="card heroDetailCard"><h2>${b.icon} ${b.name} <span class="rarity ${o.rarity}">${o.rarity}</span></h2><div class="mut">${b.cls} • ${active?'Active Slot '+(found+1)+' • Lv.'+S.party[found].level:'Reserve'}</div>
+ <div class="card" style="margin-top:6px"><div class="tiny">${summary}</div></div>
+ <div class="heroOverviewActions">
+   <button class="btn" onclick="openHeroStatsPage('${id}')">STATS</button>
+   <button class="btn" onclick="openHeroSkillsPage('${id}')">SKILLS</button>
+   <button class="btn" onclick="openHeroEquipmentPage('${id}')">EQUIPMENT</button>
+ </div>
+ <div class="row" style="margin-top:6px"><button class="btn gold" onclick="ascendHero('${id}')">ASCEND</button><button class="btn primary" ${id==='mc'?'disabled':''} onclick="swapFromDetail('${id}')">SWAP</button></div></div>
  <div class="card reserveSection"><div class="mut">RESERVE HEROES • highest rarity first</div><div class="reserveList" style="margin-top:5px">${reserveHeroIds().map(rid=>{let rb=baseHero(rid),ro=heroObj(rid);return`<button class="reserveRow" onclick="openHeroDetail('${rid}')"><div class="ico">${rb.icon}</div><div style="flex:1;text-align:left"><b>${rb.name}</b> • <span class="rarity ${ro.rarity}">${ro.rarity}</span><div class="tiny">${rb.cls}</div></div></button>`}).join('')||'<div class="mut">No reserve heroes yet.</div>'}</div></div>`;
 }
 
