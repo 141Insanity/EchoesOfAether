@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.9</title>
+<title>Echoes of Aether v0.7.10</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -106,7 +106,7 @@ button,.btn,.building,.gear,.skillBubble,.formcell{
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.9 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.10 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -405,12 +405,23 @@ function repairSkillLoadout(id){
  return l;
 }
 S.dragSkill=S.dragSkill||null;
-function skillDragStart(hero,sid,sourceEl,touch){
- skillDragCleanup();S.dragSkill={hero,sid,target:sid,sourceEl};
+function skillDragStart(hero,sid,sourceEl,point){
+ skillDragCleanup();
+ S.dragSkill={hero,sid,target:sid,sourceEl};
  if(sourceEl)sourceEl.classList.add('dragSource');
  let ghost=sourceEl?sourceEl.cloneNode(true):null;
- if(ghost){ghost.removeAttribute('onclick');ghost.removeAttribute('ontouchstart');ghost.removeAttribute('draggable');ghost.classList.remove('dragSource','dropTarget');ghost.classList.add('skillDragGhost');document.body.appendChild(ghost);S.dragSkill.ghost=ghost}
- if(touch)skillDragMove(touch);if(navigator.vibrate)navigator.vibrate(20)
+ if(ghost){
+   ghost.removeAttribute('onclick');
+   ghost.removeAttribute('ontouchstart');
+   ghost.removeAttribute('onpointerdown');
+   ghost.removeAttribute('draggable');
+   ghost.classList.remove('dragSource','dropTarget');
+   ghost.classList.add('skillDragGhost');
+   document.body.appendChild(ghost);
+   S.dragSkill.ghost=ghost;
+ }
+ if(point)skillDragMove(point);
+ if(navigator.vibrate)navigator.vibrate(20);
 }
 function skillDragEnd(commit=true){
  let d=S.dragSkill;if(!d)return;
@@ -420,13 +431,13 @@ function skillDragEnd(commit=true){
 }
 function skillDrop(hero,targetSid){if(!S.dragSkill||S.dragSkill.hero!==hero)return;S.dragSkill.target=targetSid;skillDragEnd(true)}
 
-function skillDragMove(touch){
+function skillDragMove(point){
  let d=S.dragSkill;if(!d)return;
- if(d.ghost){d.ghost.style.left=touch.clientX+'px';d.ghost.style.top=touch.clientY+'px'}
+ if(d.ghost){d.ghost.style.left=point.clientX+'px';d.ghost.style.top=point.clientY+'px'}
  document.querySelectorAll('.skillBubble.dropTarget').forEach(x=>x.classList.remove('dropTarget'));
- let under=document.elementFromPoint(touch.clientX,touch.clientY);
+ let under=document.elementFromPoint(point.clientX,point.clientY);
  let target=under&&under.closest?under.closest('.skillBubble[data-skill]'):null;
- d.target=d.sid; // default = cancel/no change
+ d.target=d.sid;
  if(target&&target.dataset.skill&&target.dataset.skill!==d.sid){
    let l=repairSkillLoadout(d.hero);
    if(l.active.includes(target.dataset.skill)){
@@ -439,8 +450,80 @@ function skillDragCleanup(){
  document.querySelectorAll('.skillBubble.dragSource,.skillBubble.dropTarget').forEach(x=>x.classList.remove('dragSource','dropTarget'));
  if(S.dragSkill&&S.dragSkill.ghost&&S.dragSkill.ghost.remove)S.dragSkill.ghost.remove();
  skillRemoveGlobalDragListeners();
- S.dragSkill=null;
+ S.dragSkill=null;;
 }
+
+function skillPointerDown(hero,sid,el,ev){
+ if(ev.pointerType==='mouse' && ev.button!==0)return;
+ if(S.skillPress)return;
+ let sx=ev.clientX,sy=ev.clientY;
+ S.skillPress={hero,sid,el,pointerId:ev.pointerId,sx,sy,armed:false,timer:null};
+
+ try{el.setPointerCapture(ev.pointerId)}catch(_){}
+
+ S.skillPress.timer=setTimeout(()=>{
+   let p=S.skillPress;
+   if(!p||p.pointerId!==ev.pointerId)return;
+   p.armed=true;
+   skillDragStart(hero,sid,el,{clientX:sx,clientY:sy});
+ },320);
+}
+
+function skillPointerMove(ev){
+ let p=S.skillPress;
+ if(!p||p.pointerId!==ev.pointerId)return;
+
+ if(!p.armed){
+   // Small movement before long-hold is fine. Only cancel if it's clearly a scroll/gesture.
+   if(Math.hypot(ev.clientX-p.sx,ev.clientY-p.sy)>18){
+     clearTimeout(p.timer);
+     try{p.el.releasePointerCapture(p.pointerId)}catch(_){}
+     S.skillPress=null;
+   }
+   return;
+ }
+
+ ev.preventDefault();
+ skillDragMove({clientX:ev.clientX,clientY:ev.clientY});
+}
+
+function skillPointerUp(ev){
+ let p=S.skillPress;
+ if(!p||p.pointerId!==ev.pointerId)return;
+
+ clearTimeout(p.timer);
+ try{p.el.releasePointerCapture(p.pointerId)}catch(_){}
+
+ let wasArmed=p.armed;
+ S.skillPress=null;
+
+ if(wasArmed){
+   ev.preventDefault();
+   skillDragEnd(true);
+ }else{
+   skillBubbleTap(p.hero,p.sid);
+ }
+}
+
+function skillPointerCancel(ev){
+ let p=S.skillPress;
+ if(!p||p.pointerId!==ev.pointerId)return;
+
+ clearTimeout(p.timer);
+
+ // If already grabbed, do NOT interpret pointercancel as a drop.
+ // Keep the visual drag state alive and wait for pointerup/window blur cleanup.
+ if(p.armed)return;
+
+ try{p.el.releasePointerCapture(p.pointerId)}catch(_){}
+ S.skillPress=null;
+}
+
+
+document.addEventListener('pointermove',skillPointerMove,{capture:true,passive:false});
+document.addEventListener('pointerup',skillPointerUp,{capture:true,passive:false});
+document.addEventListener('pointercancel',skillPointerCancel,{capture:true,passive:false});
+
 function skillBubbleTap(hero,sid){if(S.suppressSkillClick===sid)return;openSkillDetail(hero,sid)}
 
 
@@ -522,7 +605,7 @@ function skillTouchHold(hero,sid,el,ev){
 }
 function skillBubbleHTML(hero,s,eq=false,i=0){
  if(!s||!s.id||!s.name)return'';
- return`<div class="skillBubbleWrap"><button class="skillBubble ${eq?'equipped':''}" data-skill="${s.id}" draggable="${eq}" onclick="skillBubbleTap('${hero}','${s.id}')" ondragstart="skillDragStart('${hero}','${s.id}',this,event)" ondragover="event.preventDefault()" ondrop="skillDrop('${hero}','${s.id}')" ondragend="skillDragEnd()" ontouchstart="${eq?`skillTouchHold('${hero}','${s.id}',this,event)`:''}">${eq?`<span class="prio">${i+1}</span>`:''}<span>${skillIcon(s)}</span><span class="lvl">Lv.${skillLevel(s.id)}</span></button><div class="skillBubbleName">${s.name}</div></div>`;
+ return`<div class="skillBubbleWrap"><button class="skillBubble ${eq?'equipped':''}" data-skill="${s.id}" draggable="false" onpointerdown="${eq?`skillPointerDown(\'${hero}\',\'${s.id}\',this,event)`:``}" onclick="${eq?'':`skillBubbleTap(\'${hero}\',\'${s.id}\')`}">${eq?`<span class="prio">${i+1}</span>`:''}<span>${skillIcon(s)}</span><span class="lvl">Lv.${skillLevel(s.id)}</span></button><div class="skillBubbleName">${s.name}</div></div>`;
 }
 function openSkillDetail(hero,sid){
  let s=skillById(sid);if(!s)return;let z=scaledWithGear(hero,s),x=z.x,lv=skillLevel(s.id),c=skillUpgradeCost(s.id),l=repairSkillLoadout(hero),eq=l.active.includes(s.id);
