@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.0</title>
+<title>Echoes of Aether v0.7.1</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -62,7 +62,7 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.0 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.1 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -329,6 +329,14 @@ function openCodex(){let ids=HB.map(x=>x.id);let html=`<div class="card modalcar
 
 function E(id){return document.getElementById(id)}
 function save(){localStorage.aetherV04=JSON.stringify(S)}
+function persistBootSave(){
+ try{
+  if(!Number.isFinite(S.claimed))S.claimed=Date.now();
+  S.mine=S.mine||{last:Date.now(),level:1};
+  if(!Number.isFinite(S.mine.last))S.mine.last=Date.now();
+  save();
+ }catch(e){console.warn('Save initialization failed',e)}
+}
 function ri(r){return RS.indexOf(r)}
 function baseHero(id){if(id==='mc')return{id:'mc',name:S.mc.name,native:'Common',cls:S.mc.cls,icon:'🧑',hp:S.mc.cls==='Warrior'?175:S.mc.cls==='Cleric'?150:135,atk:S.mc.cls==='Mage'?37:S.mc.cls==='Rogue'?34:30,def:S.mc.cls==='Warrior'?20:13,spd:S.mc.cls==='Rogue'?135:S.mc.cls==='Ranger'?115:95};return HB.find(h=>h.id===id)}
 function heroObj(id){return id==='mc'?S.mc:S.heroes[id]}
@@ -683,6 +691,7 @@ function renderDungeons(){
 function renderAethergate(){let t=S.gachaTab,g=gateState(t),k=sigilName(t),r=gateRates(t),nx=gateRates(t,Math.min(8,g.level+1)),res=t==='Heroes'?(S.heroGateResults||[]):(S.gateResults||[]),odds=RS.map((x,i)=>r[i]?`<span class="badge"><span class="rarity ${x}">${x}</span> ${r[i]}%</span>`:'').join(' '),diff=RS.map((x,i)=>nx[i]!==r[i]?`${x} ${r[i]}→${nx[i]}%`:'').filter(Boolean).join(' • '),cards=t==='Heroes'?res.map(o=>`<div class="gear"><div class="ico">${o.hero.icon}</div><div class="txt"><b>${o.hero.name}</b><br><span class="rarity ${o.hero.native}">${o.hero.native}</span><br>${o.newHero?'NEW HERO':'Duplicate → shards'}</div></div>`).join(''):res.map(x=>`<div class="gear"><div class="ico">${x.icon}</div><div class="txt"><b>${x.name}</b><br><span class="rarity ${x.rarity}">${x.rarity}</span> • ${x.slot}</div></div>`).join('');E('aethergate').innerHTML=`<div class="card banner"><h2>✦ ${t} Gate • Lv.${g.level}</h2><div class="mut">${SIGIL_ICON[k]} ${k} Sigil ×${S.sigils[k]||0} • God pity ${g.pity}/140</div><div style="line-height:1.8">${odds}</div><div class="progress"><i style="width:${g.level>=8?100:g.xp/gateNeed(g.level)*100}%"></i></div><div class="tiny">${g.level>=8?'MAX GATE':g.xp+'/'+gateNeed(g.level)+' Gate XP'}${g.level<8?'<br>Next: '+diff:''}</div></div><div class="filterbar">${['Heroes','Weapons','Armor','Accessories'].map(x=>`<button class="btn ${t===x?'primary':''}" onclick="setGachaTab('${x}')">${x}</button>`).join('')}</div><div class="card"><div class="tiny">Sigils never mix with gems • 10 Sigils = 11 pulls • bonus pull grants Gate XP</div><div class="row"><button class="btn" onclick="${t==='Heroes'?'summonHero':'gatePull'}(1)">1 PULL</button><button class="btn gold" onclick="${t==='Heroes'?'summonHero':'gatePull'}(10)">10+1 PULL</button></div></div><div class="card grow scroll">${cards||'<div class="mut">Ready.</div>'}</div>`}
 
 function render(p){if(p==='home')renderHome();if(p==='heroes')renderHeroes();if(p==='explore')renderExplore();if(p==='dungeons')renderDungeons();if(p==='aethergate')renderAethergate()}
+persistBootSave();
 topbar();renderHome();renderHeroes();renderExplore();renderDungeons();renderAethergate();
 setInterval(()=>{if(E('home').classList.contains('on'))renderHome()},1000);
 
