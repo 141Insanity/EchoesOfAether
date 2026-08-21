@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.8</title>
+<title>Echoes of Aether v0.7.9</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -106,7 +106,7 @@ button,.btn,.building,.gear,.skillBubble,.formcell{
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.8 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.9 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -424,23 +424,101 @@ function skillDragMove(touch){
  let d=S.dragSkill;if(!d)return;
  if(d.ghost){d.ghost.style.left=touch.clientX+'px';d.ghost.style.top=touch.clientY+'px'}
  document.querySelectorAll('.skillBubble.dropTarget').forEach(x=>x.classList.remove('dropTarget'));
- let under=document.elementFromPoint(touch.clientX,touch.clientY),target=under&&under.closest?under.closest('.skillBubble[data-skill]'):null;
- if(target&&target.dataset.skill&&target.dataset.skill!==d.sid){let l=repairSkillLoadout(d.hero);if(l.active.includes(target.dataset.skill)){d.target=target.dataset.skill;target.classList.add('dropTarget')}}else d.target=d.sid
+ let under=document.elementFromPoint(touch.clientX,touch.clientY);
+ let target=under&&under.closest?under.closest('.skillBubble[data-skill]'):null;
+ d.target=d.sid; // default = cancel/no change
+ if(target&&target.dataset.skill&&target.dataset.skill!==d.sid){
+   let l=repairSkillLoadout(d.hero);
+   if(l.active.includes(target.dataset.skill)){
+     d.target=target.dataset.skill;
+     target.classList.add('dropTarget');
+   }
+ }
 }
 function skillDragCleanup(){
  document.querySelectorAll('.skillBubble.dragSource,.skillBubble.dropTarget').forEach(x=>x.classList.remove('dragSource','dropTarget'));
- if(S.dragSkill&&S.dragSkill.ghost&&S.dragSkill.ghost.remove)S.dragSkill.ghost.remove();S.dragSkill=null
+ if(S.dragSkill&&S.dragSkill.ghost&&S.dragSkill.ghost.remove)S.dragSkill.ghost.remove();
+ skillRemoveGlobalDragListeners();
+ S.dragSkill=null;
 }
 function skillBubbleTap(hero,sid){if(S.suppressSkillClick===sid)return;openSkillDetail(hero,sid)}
 
+
+function skillGlobalMove(e){
+ if(!S.dragSkill)return;
+ let t=e.touches&&e.touches[0];
+ if(!t)return;
+ e.preventDefault();
+ skillDragMove(t);
+}
+function skillGlobalEnd(e){
+ if(!S.dragSkill)return;
+ e.preventDefault();
+ skillDragEnd(true);
+ skillRemoveGlobalDragListeners();
+}
+function skillGlobalCancel(e){
+ // iOS can emit touchcancel during a long stationary hold.
+ // Once the skill is actually grabbed, do NOT drop it just because Safari
+ // cancelled the original element's touch ownership. Keep waiting for a real
+ // touchend/pointerup from the document/window.
+ if(!S.dragSkill)return;
+ e.preventDefault();
+}
+function skillRemoveGlobalDragListeners(){
+ document.removeEventListener('touchmove',skillGlobalMove,true);
+ document.removeEventListener('touchend',skillGlobalEnd,true);
+ document.removeEventListener('touchcancel',skillGlobalCancel,true);
+ window.removeEventListener('touchend',skillGlobalEnd,true);
+}
+function skillAddGlobalDragListeners(){
+ skillRemoveGlobalDragListeners();
+ document.addEventListener('touchmove',skillGlobalMove,{capture:true,passive:false});
+ document.addEventListener('touchend',skillGlobalEnd,{capture:true,passive:false});
+ document.addEventListener('touchcancel',skillGlobalCancel,{capture:true,passive:false});
+ window.addEventListener('touchend',skillGlobalEnd,{capture:true,passive:false});
+}
+
 function skillTouchHold(hero,sid,el,ev){
  if(!ev.touches||!ev.touches[0])return;
- let start=ev.touches[0],sx=start.clientX,sy=start.clientY,armed=false;
- let timer=setTimeout(()=>{armed=true;skillDragStart(hero,sid,el,start)},360);
- let move=e=>{let t=e.touches&&e.touches[0];if(!t)return;if(!armed&&Math.hypot(t.clientX-sx,t.clientY-sy)>12){clearTimeout(timer);return}if(armed){e.preventDefault();skillDragMove(t)}};
- let end=e=>{clearTimeout(timer);el.removeEventListener('touchmove',move);el.removeEventListener('touchend',end);el.removeEventListener('touchcancel',cancel);if(armed){e.preventDefault();skillDragEnd(true)}};
- let cancel=()=>{clearTimeout(timer);skillDragCleanup()};
- el.addEventListener('touchmove',move,{passive:false});el.addEventListener('touchend',end,{once:true,passive:false});el.addEventListener('touchcancel',cancel,{once:true})
+ let start=ev.touches[0],sx=start.clientX,sy=start.clientY,armed=false,finished=false;
+ let timer=setTimeout(()=>{
+   if(finished)return;
+   armed=true;
+   skillDragStart(hero,sid,el,start);
+   skillAddGlobalDragListeners();
+ },360);
+
+ let preMove=e=>{
+   if(armed||finished)return;
+   let t=e.touches&&e.touches[0];if(!t)return;
+   if(Math.hypot(t.clientX-sx,t.clientY-sy)>12){
+     clearTimeout(timer);
+     finished=true;
+     cleanupPre();
+   }
+ };
+ let preEnd=()=>{
+   if(armed)return; // global handler owns release once grabbed
+   clearTimeout(timer);
+   finished=true;
+   cleanupPre();
+ };
+ let preCancel=()=>{
+   if(armed)return; // ignore browser cancellation after pickup
+   clearTimeout(timer);
+   finished=true;
+   cleanupPre();
+ };
+ let cleanupPre=()=>{
+   el.removeEventListener('touchmove',preMove);
+   el.removeEventListener('touchend',preEnd);
+   el.removeEventListener('touchcancel',preCancel);
+ };
+
+ el.addEventListener('touchmove',preMove,{passive:true});
+ el.addEventListener('touchend',preEnd,{once:true,passive:true});
+ el.addEventListener('touchcancel',preCancel,{once:true,passive:true});
 }
 function skillBubbleHTML(hero,s,eq=false,i=0){
  if(!s||!s.id||!s.name)return'';
