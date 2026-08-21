@@ -128,3 +128,10 @@ v0.7.0 ARSENAL & HEROES
 - Expanded equipment pool with Legendary / World / God signature effects.
 - Hero / Equipment Codex access.
 - Tester RESET SAVE and +100 All Sigils controls for clean development testing.
+
+v0.7.1 SAVE HOTFIX
+- Fresh installs now persist the initial save immediately on boot.
+- Idle Expedition and Aether Mine timestamps now survive refresh/close even before the player performs another action.
+- Package is GitHub Pages-ready: index.html and assets are at ZIP root; Netlify config removed.
+
+v0.7.2: Skill Lv1-10 with Gold + Skill Dust, Lv5/Lv10 milestones, signature skill modifiers, deterministic Fusion scaling foundation, Codex milestone trigger tracker.
