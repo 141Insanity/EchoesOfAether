@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.5</title>
+<title>Echoes of Aether v0.7.6</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -60,12 +60,25 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 
 .btn.primary{color:#fff!important;opacity:1!important}
 .btn.primary:disabled{opacity:.42!important}
+
+.skillLoadoutTop{display:flex;gap:9px;align-items:flex-start;overflow-x:auto;padding:8px 2px 10px}
+.skillBubbleWrap{width:72px;flex:0 0 72px;text-align:center;position:relative}
+.skillBubble{width:62px;height:62px;border-radius:50%;border:3px solid #58627e;background:radial-gradient(circle at 35% 30%,#313b60,#11172b 72%);display:flex;align-items:center;justify-content:center;margin:auto;font-size:27px;position:relative;box-shadow:0 4px 12px #0007}
+.skillBubble.equipped{border-color:#e9a933}.skillBubble.special{border-color:#a56cff}.skillBubble.dragging{transform:scale(1.12);opacity:.78}
+.skillBubble .lvl{position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);font-size:7px;background:#252b3d;border-radius:6px;padding:1px 5px;white-space:nowrap}
+.skillBubble .prio{position:absolute;top:-5px;left:-4px;background:#e9a933;color:#151515;border-radius:50%;width:18px;height:18px;font-size:8px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.skillBubbleName{font-size:7px;margin-top:8px;line-height:1.1;white-space:normal}
+.skillPoolGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 5px;padding-top:8px}
+.skillSpecials{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.skillSocket{border:1px solid #ffffff16;border-radius:10px;padding:7px;text-align:center;background:#ffffff05}
+.skillDetailStats{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin:7px 0}
+.skillDetailStat{border:1px solid #ffffff12;border-radius:8px;padding:6px;text-align:center}
 </style>
 </head>
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.5 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.6 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -322,7 +335,46 @@ function skillObj(id){for(let k in HERO_SKILLS){let s=HERO_SKILLS[k].find(x=>x.i
 function toggleSkill(id,sid){let l=ensureLoadout(id),max=skillSlots(heroObj(id).rarity),i=l.active.indexOf(sid);if(i>=0)l.active.splice(i,1);else if(l.active.length<max)l.active.push(sid);save();openSkillLoadout(id)}
 function moveSkill(id,sid,d){let l=ensureLoadout(id),i=l.active.indexOf(sid),j=i+d;if(i<0||j<0||j>=l.active.length)return;[l.active[i],l.active[j]]=[l.active[j],l.active[i]];save();openSkillLoadout(id)}
 function autoPriority(id){let l=ensureLoadout(id);l.active.sort((a,b)=>(skillObj(a).cd||9)-(skillObj(b).cd||9));save();openSkillLoadout(id)}
-function openSkillLoadout(id){try{let b=baseHero(id),o=heroObj(id),l=ensureSkillLoadout(id),pool=heroSkillPool(id),max=loadoutSlotsFor(o.rarity);let row=(s,eq=false,i=0)=>{let z=scaledWithGear(id,s),x=z.x,lv=skillLevel(s.id),c=skillUpgradeCost(s.id);return`<div class="skillrow"><div style="flex:1"><b>${eq?(i+1)+'. ':''}${s.name} • Lv.${lv}</b><div class="skillmeta">CD ${s.cd||'-'}${x.mp?' • '+x.mp+' MP':''}</div><div class="tiny">${s.desc}${x.milestone?'<br><b>'+x.milestone+'</b>':''}${z.mods.length?'<br><span class="sigfx">'+z.mods.join('<br>')+'</span>':''}<br>${lv>=10?'MAX':'Upgrade '+c.gold+'g + '+c.dust+' Skill Dust'}</div></div>${eq?`<button class="btn" onclick="moveSkillPriority('${id}','${s.id}',-1)">↑</button><button class="btn" onclick="moveSkillPriority('${id}','${s.id}',1)">↓</button>`:`<button class="btn" onclick="toggleSkillEquip('${id}','${s.id}')">${l.active.includes(s.id)?'UNEQUIP':'EQUIP'}</button>`}<button class="btn" ${lv>=10?'disabled':''} onclick="upgradeSkill('${s.id}','${id}')">+</button></div>`};let html=`<div class="card modalcard"><button class="modalx" onclick="modalXClose()">✕</button><h2>${b.icon} ${b.name} • Skill Loadout</h2><div class="mut">${l.active.length}/${max} Active Slots • Skill Dust ${S.skillDust}</div><button class="btn" style="width:100%;margin-top:5px" onclick="autoPriority('${id}')">AUTO PRIORITY</button><div class="card" style="margin-top:6px"><b>Equipped Actives</b>${l.active.map((x,i)=>row(skillById(x),true,i)).join('')}</div><div class="card" style="margin-top:6px"><b>Skill Pool</b>${pool.filter(s=>s.type==='Active').map(s=>row(s)).join('')}</div></div>`;S.modalStack=[];pushModal(html)}catch(err){console.error('Skill Loadout',err);alert('Skill Loadout error: '+err.message)}}
+
+const SKILL_ICONS={Bleed:'🩸',Poison:'☠️',Burn:'🔥',Stagger:'💫',Heal:'✚',Guard:'🛡️',Block:'🛡️',Magic:'🔮',Mana:'💠',Ranged:'🏹',WeakPoint:'🎯',Melee:'⚔️',Evasion:'🌫️',Revive:'✨',Crit:'💥',Support:'🌟',Faith:'✦'};
+function skillIcon(s){for(let t of s.tags||[])if(SKILL_ICONS[t])return SKILL_ICONS[t];return s.type==='Ultimate'?'🌠':s.type==='Passive'?'◆':s.type==='Reaction'?'↯':'✦'}
+function repairSkillLoadout(id){
+ let l=ensureSkillLoadout(id),pool=heroSkillPool(id),valid=new Set(pool.map(s=>s.id)),max=loadoutSlotsFor(heroObj(id).rarity);
+ l.active=(l.active||[]).filter(x=>valid.has(x)&&skillById(x)).slice(0,max);
+ for(let s of pool.filter(s=>s.type==='Active'))if(l.active.length<max&&!l.active.includes(s.id))l.active.push(s.id);
+ for(let k of ['ultimate','passive','reaction'])if(l[k]&&!valid.has(l[k]))l[k]=null;
+ if(!l.ultimate)l.ultimate=(pool.find(s=>s.type==='Ultimate')||{}).id||null;
+ if(!l.passive)l.passive=(pool.find(s=>s.type==='Passive')||{}).id||null;
+ if(!l.reaction)l.reaction=(pool.find(s=>s.type==='Reaction')||{}).id||null;
+ save();return l;
+}
+S.dragSkill=S.dragSkill||null;
+function skillDragStart(hero,sid){S.dragSkill={hero,sid};let e=document.querySelector(`[data-skill="${sid}"]`);if(e)e.classList.add('dragging')}
+function skillDragEnd(){document.querySelectorAll('.skillBubble.dragging').forEach(e=>e.classList.remove('dragging'));S.dragSkill=null}
+function skillDrop(hero,targetSid){
+ if(!S.dragSkill||S.dragSkill.hero!==hero)return skillDragEnd();
+ let l=repairSkillLoadout(hero),a=l.active,i=a.indexOf(S.dragSkill.sid),j=a.indexOf(targetSid);
+ if(i>=0&&j>=0&&i!==j){let [x]=a.splice(i,1);a.splice(j,0,x);save()}
+ skillDragEnd();openSkillLoadout(hero);
+}
+function skillTouchHold(hero,sid,el){
+ let moved=false,t=setTimeout(()=>{if(!moved){skillDragStart(hero,sid);if(navigator.vibrate)navigator.vibrate(25)}},420);
+ let move=e=>{if(!S.dragSkill)return;let pt=e.touches[0],x=document.elementFromPoint(pt.clientX,pt.clientY)?.closest('[data-skill]');if(x&&x.dataset.skill!==sid)skillDrop(hero,x.dataset.skill)};
+ let end=()=>{clearTimeout(t);el.removeEventListener('touchmove',move);el.removeEventListener('touchend',end);if(S.dragSkill)skillDragEnd()};
+ el.addEventListener('touchmove',move,{passive:true});el.addEventListener('touchend',end,{once:true});
+}
+function skillBubbleHTML(hero,s,eq=false,i=0){
+ if(!s)return'';
+ return`<div class="skillBubbleWrap"><button class="skillBubble ${eq?'equipped':''}" data-skill="${s.id}" draggable="${eq}" onclick="openSkillDetail('${hero}','${s.id}')" ondragstart="skillDragStart('${hero}','${s.id}')" ondragover="event.preventDefault()" ondrop="skillDrop('${hero}','${s.id}')" ondragend="skillDragEnd()" ontouchstart="${eq?`skillTouchHold('${hero}','${s.id}',this)`:''}">${eq?`<span class="prio">${i+1}</span>`:''}<span>${skillIcon(s)}</span><span class="lvl">Lv.${skillLevel(s.id)}</span></button><div class="skillBubbleName">${s.name}</div></div>`;
+}
+function openSkillDetail(hero,sid){
+ let s=skillById(sid);if(!s)return;let z=scaledWithGear(hero,s),x=z.x,lv=skillLevel(s.id),c=skillUpgradeCost(s.id),l=repairSkillLoadout(hero),eq=l.active.includes(s.id);
+ let values=[];if(x.mult)values.push(['Power',Math.round(x.mult*100)+'%']);if(x.heal)values.push(['Healing',Math.round(x.heal*100)+'%']);if(x.buildup)values.push(['Buildup',x.buildup]);if(x.mp)values.push(['Mana',x.mp]);if(x.cd)values.push(['Cooldown',x.cd+' actions']);
+ let html=`<div class="card modalcard"><button class="modalx" onclick="openSkillLoadout('${hero}')">✕</button><div style="text-align:center"><div class="skillBubble special" style="margin:auto">${skillIcon(s)}<span class="lvl">Lv.${lv}</span></div><h2 style="margin-top:12px">${s.name}</h2><div>${(s.tags||[]).map(t=>`<span class="skilltag">${t}</span>`).join(' ')}</div></div><p class="mut">${s.desc}</p><div class="skillDetailStats">${values.map(v=>`<div class="skillDetailStat"><b>${v[1]}</b><br><span class="tiny">${v[0]}</span></div>`).join('')}</div>${z.mods.length?`<div class="card"><b>Equipment Modifier</b><div class="sigfx">${z.mods.join('<br>')}</div></div>`:''}${x.milestone?`<div class="card"><b>${x.milestone}</b><div class="tiny">Milestone bonus active.</div></div>`:''}<div class="tiny" style="margin-top:7px">${lv>=10?'MAX LEVEL':'Upgrade: '+c.gold+' gold • '+c.dust+' Skill Dust'}</div><div class="row" style="margin-top:6px">${s.type==='Active'?`<button class="btn" onclick="toggleSkillEquip('${hero}','${s.id}')">${eq?'UNEQUIP':'EQUIP'}</button>`:''}<button class="btn primary" ${lv>=10?'disabled':''} onclick="upgradeSkill('${s.id}','${hero}')">${lv>=10?'MAX':'UPGRADE'}</button></div></div>`;
+ S.modalStack=[];pushModal(html);
+}
+
+function openSkillLoadout(id){try{let b=baseHero(id),o=heroObj(id),l=repairSkillLoadout(id),pool=heroSkillPool(id),max=loadoutSlotsFor(o.rarity),act=pool.filter(s=>s.type==='Active'),ult=skillById(l.ultimate),pas=skillById(l.passive),react=skillById(l.reaction);let html=`<div class="card modalcard"><button class="modalx" onclick="modalXClose()">✕</button><h2>${b.icon} ${b.name} • Skills</h2><div class="mut">${l.active.length}/${max} Active Slots • Skill Dust ${S.skillDust}</div><div class="card" style="margin-top:6px"><b>Equipped Skills</b><div class="tiny">Tap for details • long-hold and drag to change priority.</div><div class="skillLoadoutTop">${l.active.map((sid,i)=>skillBubbleHTML(id,skillById(sid),true,i)).join('')}${Array.from({length:Math.max(0,max-l.active.length)},()=>`<div class="skillBubbleWrap"><div class="skillBubble" style="opacity:.35">＋</div><div class="skillBubbleName">Empty</div></div>`).join('')}</div></div><div class="card" style="margin-top:6px"><b>Special Slots</b><div class="skillSpecials"><div class="skillSocket"><span class="tiny">ULTIMATE</span>${ult?skillBubbleHTML(id,ult):'<div class="mut">Locked</div>'}</div><div class="skillSocket"><span class="tiny">PASSIVE</span>${pas?skillBubbleHTML(id,pas):'<div class="mut">None</div>'}</div><div class="skillSocket"><span class="tiny">REACTION</span>${react?skillBubbleHTML(id,react):'<div class="mut">None</div>'}</div></div></div><div class="card" style="margin-top:6px"><b>Skill Pool</b><div class="skillPoolGrid">${act.map(s=>skillBubbleHTML(id,s,l.active.includes(s.id))).join('')}</div></div></div>`;S.modalStack=[];pushModal(html)}catch(err){console.error('Skill Loadout',err);alert('Skill Loadout error: '+err.message)}}
 function stIcon(t){return t==='Bleed'?'🩸':t==='Poison'?'☠️':t==='Burn'?'🔥':'💫'}
 function stNeed(t){return t==='Poison'?110:t==='Stagger'?120:100}
 function addBuildup(e,t,a){e.buildup=e.buildup||{};e.buildup[t]=(e.buildup[t]||0)+a;if(e.buildup[t]>=stNeed(t)){e.buildup[t]=0;if(t==='Bleed'){let d=Math.max(1,Math.floor(e.max*.035));e.hp=Math.max(0,e.hp-d);return`HEMORRHAGE! ${d}`};if(t==='Poison'){e.poison=Math.min(3,(e.poison||0)+1);return`TOXICITY ${e.poison}`};if(t==='Burn'){let d=Math.max(1,Math.floor(e.max*.025));e.hp=Math.max(0,e.hp-d);return`IGNITE! ${d}`};if(t==='Stagger'){e.delay=(e.delay||0)+30;return'BREAK!'}}return''}
@@ -416,7 +468,7 @@ function testSkillLoadout(id){if(typeof HERO_SKILLS==='undefined')return alert('
 
 function skillUpgradeCost(id){let l=skillLevel(id);return{gold:150*l*l,dust:5+l*3}}
 function skillScaled(s){let l=skillLevel(s.id),x={...s},m=1+.055*(l-1)+(l>=5?.08:0)+(l>=10?.12:0);if(x.mult)x.mult=Math.round(x.mult*m*100)/100;if(x.heal)x.heal=Math.round(x.heal*m*1000)/1000;if(x.buildup)x.buildup=Math.round(x.buildup*m);x.milestone=l>=10?'Lv.10 Mastery':l>=5?'Lv.5 Breakthrough':'';return x}
-function upgradeSkill(id,hero){let l=skillLevel(id),c=skillUpgradeCost(id);if(l>=10||S.gold<c.gold||S.skillDust<c.dust)return;S.gold-=c.gold;S.skillDust-=c.dust;S.skillLevels[id]=l+1;save();topbar();openSkillLoadout(hero)}
+function upgradeSkill(id,hero){let l=skillLevel(id),c=skillUpgradeCost(id);if(l>=10||S.gold<c.gold||S.skillDust<c.dust)return;S.gold-=c.gold;S.skillDust-=c.dust;S.skillLevels[id]=l+1;save();topbar();openSkillDetail(hero,id)}
 function gearSkillMods(hero,s){let i=S.party.findIndex(p=>p.hero===hero);if(i<0)return[];let a=[];for(let uid of Object.values(S.party[i].gear)){let f=findGear(uid);if(!f)continue;if(f.item.name==='Astral Codex'&&s.name==='Meteor')a.push('Astral Codex: +35% damage, +10 MP');if(f.item.name==='Bloodglass Vialblade'&&s.tags?.includes('Bleed'))a.push('Bloodglass: Bleed signature active');if(f.item.name==="Saint's Reliquary"&&s.name==='Mend')a.push("Saint's Reliquary: excess healing shield");if(f.item.name==='Heartstring'&&s.tags?.includes('WeakPoint'))a.push('Heartstring: Precision Crit bonus +30%')}return a}
 function scaledWithGear(hero,s){let x=skillScaled(s),mods=gearSkillMods(hero,s);if(mods.some(v=>v.startsWith('Astral Codex'))){x.mult=(x.mult||0)*1.35;x.mp=(x.mp||0)+10}return{x,mods}}
 function fusionStatMultiplier(uid){return 1+(S.fusion[uid]||0)*.06}
