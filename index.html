@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.12</title>
+<title>Echoes of Aether v0.7.13</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -33,7 +33,7 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 .gearList{display:flex;flex-direction:column;gap:4px}.gear{display:flex;align-items:center;gap:6px;border:1px solid #ffffff10;background:#ffffff06;border-radius:8px;padding:6px}.gear .ico{font-size:20px}.gear .txt{flex:1;font-size:7px}
 .timeline{display:flex;gap:3px;overflow:hidden}.turn{min-width:40px;background:#202744;border-radius:7px;padding:4px;text-align:center;font-size:7px}.turn.now{outline:2px solid var(--cyan)}
 .enemy{text-align:center}.enemy .sprite{font-size:38px}.partyBattle{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.unit{padding:5px;border:1px solid #ffffff10;background:#ffffff06;border-radius:8px;font-size:7px}.unit.ko{opacity:.3}
-.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}.log{height:47px;overflow:hidden;background:#080a12;border-radius:7px;padding:5px;font-size:7px;line-height:1.35;color:#bec7e5}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.log{height:47px;overflow:hidden;background:#080a12;border-radius:7px;padding:5px;font-size:7px;line-height:1.35;color:#bec7e5}
 .badge{display:inline-block;font-size:7px;background:#ffffff10;border-radius:99px;padding:2px 5px;margin:1px}.lock{opacity:.4}.big{font-size:22px;font-weight:950}
 .modal{position:fixed;z-index:90;inset:0;background:#05060bdc;display:none;align-items:center;justify-content:center;padding:16px;overflow:hidden}.modal.on{display:flex}.modal .card{width:min(100%,460px);max-height:84dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 
@@ -134,7 +134,7 @@ button,.btn,.building,.gear,.skillBubble,.formcell{
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.12 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.13 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -1087,7 +1087,63 @@ function commandActor(){return S.command.units.find(u=>u.id===S.command.actor)}
 function commandNext(){let a=commandAlive(),bt=Infinity,b=null;for(let u of a){let t=(1000-u.g)/Math.max(1,u.es||effSpd(u.spd));if(t<bt){bt=t;b=u}}for(let u of a)u.g+=(u.es||effSpd(u.spd))*bt;b.g-=1000;return b}
 function commandLog(t){S.command.log.push(t);if(S.command.log.length>7)S.command.log.shift()}
 function commandAdvance(){if(!S.command||S.command.over)return;let a=commandNext();S.command.actor=a.id;if(a.type==='enemy')setTimeout(commandEnemyAct,140)}
-function commandHeroAct(kind){let a=commandActor(),e=commandEnemy();if(!a||a.type!=='hero'||S.command.over)return;a.skillCD=a.skillCD||{};let hid=S.party[a.pidx]?.hero,l=hid?ensureLoadout(hid):null,s=null;if(kind==='skill'&&l){for(let id of l.active){let q=skillObj(id);if((a.skillCD[id]||0)>0)continue;if(q.mp&&(a.mana??100)<q.mp)continue;if(q.cond==='low'&&e.hp/e.max>.3)continue;s=q;break}}let raw=Math.max(1,a.atk*(1-defenseReduction(e.def,a.level||1))),gl=Math.random()<glanceChance(a.precision||100,e.evasion||90),crit=Math.random()<effectiveCritRate(a.critRate||8,e.critResistance||5),mul=crit?effectiveCritMult(a.critDamage||150,e.critDefense||5):1,dmg=Math.max(1,Math.floor(raw*mul*(gl?.5:1))),note=(crit?' CRIT!':'')+(gl?' GLANCE':'');if(kind==='defend'){a.guard=true;commandLog(`${a.name} defends.`)}else if(kind==='ult'){if(ri(a.rarity)<4||a.res<100)return;a.res=0;dmg=Math.floor(dmg*3.1);e.hp=Math.max(0,e.hp-dmg);commandLog(`${a.name} uses ${HERO_ULT[hid]||'Ultimate'} for ${dmg}!`)}else if(s){if(s.heal){let allies=S.command.units.filter(u=>u.type==='hero'&&u.hp>0).sort((x,y)=>x.hp/x.max-y.hp/y.max),t=allies[0];if(t&&t.hp/t.max<.8){let heal=Math.floor(t.max*s.heal);t.hp=Math.min(t.max,t.hp+heal);commandLog(`${a.name} uses ${s.n}, healing ${t.name} for ${heal}.`)}else{s=null}}if(s&&!s.heal){if(s.mp)a.mana=Math.max(0,(a.mana??100)-s.mp);dmg=Math.floor(dmg*(s.m||1));e.hp=Math.max(0,e.hp-dmg);commandLog(`${a.name} uses ${s.n} for ${dmg}.${note}`);if(s.status){let x=addBuildup(e,s.status,s.build||0);if(x)commandLog(x)}if(s.weak)e.weakPoint=2}if(s)a.skillCD[s.id]=s.cd}else{a.res=Math.min(100,a.res+20);if(a.cls==='Mage')a.mana=Math.min(100,(a.mana??100)+10);e.hp=Math.max(0,e.hp-dmg);commandLog(`${a.name} attacks for ${dmg}.${note}`)}for(let k in a.skillCD)if(a.skillCD[k]>0)a.skillCD[k]--;if(e.poison){let pd=Math.max(1,Math.floor(e.max*.008*e.poison));e.hp=Math.max(0,e.hp-pd);commandLog(`Toxicity deals ${pd}.`)}if(e.hp<=0){commandWin();return}commandAdvance();save();commandRender()}
+function commandLowestAlly(){return S.command.units.filter(u=>u.type==='hero'&&u.hp>0).sort((x,y)=>x.hp/x.max-y.hp/y.max)[0]||null}
+function commandSkillEligible(a,e,s){
+ if(!s||(a.skillCD[s.id]||0)>0)return false;
+ if(s.mp&&a.resName==='Mana'&&a.res<s.mp)return false;
+ let cond=s.condition||s.cond||'',ally=commandLowestAlly(),allyPct=ally?ally.hp/ally.max:1;
+ if(cond==='low'&&e.hp/e.max>.3)return false;
+ if(cond==='lowmana'&&a.res>=(s.name==='Mana Tide'?30:25))return false;
+ if(cond==='ally75'&&allyPct>=.75)return false;
+ if(cond==='ally70'&&allyPct>=.70)return false;
+ if(cond==='ally65'&&allyPct>=.65)return false;
+ if(cond==='ally30'&&allyPct>=.30)return false;
+ if(cond==='hurt'&&allyPct>=.80)return false;
+ if(s.id==='ga_roar'&&a.hp/a.max>=.60)return false;
+ if(s.heal&&!cond&&allyPct>=.80)return false;
+ return true;
+}
+function commandReadySkill(a,e,hid){
+ let l=repairSkillLoadout(hid);
+ for(let id of l.active){let s=skillById(id);if(commandSkillEligible(a,e,s))return s}
+ return null;
+}
+function commandHeroAct(kind){
+ let a=commandActor(),e=commandEnemy();if(!a||a.type!=='hero'||S.command.over)return;
+ a.skillCD=a.skillCD||{};
+ let hid=S.party[a.pidx]?.hero,s=(kind==='attack'||kind==='basic')&&hid?commandReadySkill(a,e,hid):null,usedSkill=null;
+ let raw=Math.max(1,a.atk*(1-defenseReduction(e.def,a.level||1))),gl=Math.random()<glanceChance(a.precision||100,e.evasion||90),crit=Math.random()<effectiveCritRate(a.critRate||8,e.critResistance||5),mul=crit?effectiveCritMult(a.critDamage||150,e.critDefense||5):1,dmg=Math.max(1,Math.floor(raw*mul*(gl?.5:1))),note=(crit?' CRIT!':'')+(gl?' GLANCE':'');
+ if(kind==='defend'){
+  a.guard=true;commandLog(`${a.name} defends.`);
+ }else if(kind==='ult'){
+  if(ri(a.rarity)<4||a.res<100)return;a.res=0;dmg=Math.floor(dmg*3.1);e.hp=Math.max(0,e.hp-dmg);commandLog(`${a.name} uses ${HERO_ULT[hid]||'Ultimate'} for ${dmg}!`);
+ }else if(s){
+  usedSkill=s.id;
+  let skillName=s.name||s.n||'Skill',skillMult=s.mult??s.m??0,skillBuild=s.buildup??s.build??0,tags=s.tags||s.t||[],target=commandLowestAlly();
+  if(s.mp&&a.resName==='Mana')a.res=Math.max(0,a.res-s.mp);
+  if(s.heal&&target){
+   let heal=Math.floor(target.max*s.heal);target.hp=Math.min(target.max,target.hp+heal);commandLog(`${a.name} uses ${skillName}, healing ${target.name} for ${heal}.`);
+  }else if((s.condition||s.cond)==='lowmana'&&tags.includes('Mana')){
+   let restored=Math.min(40,100-a.res);a.res+=restored;commandLog(`${a.name} uses ${skillName}, restoring ${restored} Mana.`);
+  }else if(tags.includes('Guard')||tags.includes('Block')){
+   a.guard=true;commandLog(`${a.name} uses ${skillName}.`);
+  }else if(s.id==='ga_roar'){
+   a.nextSkillBonus=1.25;commandLog(`${a.name} uses ${skillName}.`);
+  }else if(s.id==='t_over'){
+   a.nextSkillBonus=1.30;commandLog(`${a.name} uses ${skillName}.`);
+  }else if(skillMult>0){
+   dmg=Math.max(1,Math.floor(dmg*skillMult*(a.nextSkillBonus||1)));a.nextSkillBonus=1;e.hp=Math.max(0,e.hp-dmg);commandLog(`${a.name} uses ${skillName} for ${dmg}.${note}`);if(s.status){let x=addBuildup(e,s.status,skillBuild);if(x)commandLog(x)}if(s.weak||tags.includes('WeakPoint'))e.weakPoint=2;
+  }else{
+   commandLog(`${a.name} uses ${skillName}.`);
+  }
+  a.skillCD[s.id]=s.cd||0;
+ }else{
+  a.res=Math.min(100,a.res+20);e.hp=Math.max(0,e.hp-dmg);commandLog(`${a.name} attacks for ${dmg}.${note}`);
+ }
+ for(let k in a.skillCD)if(k!==usedSkill&&a.skillCD[k]>0)a.skillCD[k]--;
+ if(e.poison){let pd=Math.max(1,Math.floor(e.max*.008*e.poison));e.hp=Math.max(0,e.hp-pd);commandLog(`Toxicity deals ${pd}.`)}
+ if(e.hp<=0){commandWin();return}commandAdvance();save();commandRender();
+}
 function commandEnemyAct(){if(!S.command||S.command.over)return;let e=commandEnemy(),targets=S.command.units.filter(u=>u.type==='hero'&&u.hp>0);if(!targets.length)return;let t=targets[Math.floor(Math.random()*targets.length)],dmg=Math.max(1,Math.floor(e.atk-t.def*.30+Math.random()*5));if(t.guard){dmg=Math.floor(dmg*.4);t.guard=false}t.hp=Math.max(0,t.hp-dmg);if(t.resMode==='build'&&t.resName==='Rage')t.res=Math.min(100,t.res+18);commandLog(`${e.name} hits ${t.name} for ${dmg}.`);if(S.command.units.filter(u=>u.type==='hero').every(u=>u.hp<=0)){S.command.over=true;S.command.result='loss';save();commandRender();return}commandAdvance();save();commandRender()}
 function commandWin(){
  let c=S.command;c.over=true;c.result='win';
@@ -1114,7 +1170,7 @@ function commandMarkup(){
  <div class="partyBattle">${hs.map(u=>`<div class="unit ${u.hp<=0?'ko':''}"><b>${u.icon} ${u.name}</b><div class="progress hp"><i style="width:${Math.max(0,u.hp/u.max*100)}%"></i></div><div class="progress res"><i style="width:${u.res}%"></i></div><div class="tiny">${u.hp}/${u.max} • ${u.resName} ${u.res}</div></div>`).join('')}</div>
  <div class="card"><div class="log">${c.log.map(x=>'› '+x).join('<br>')}</div>
  ${c.over?(c.result==='win'?`<div class="mut">Victory!</div>${lootHTML()}`:`<div class="fail">WOMP WOMP<br><span class="tiny">The enemy has requested a rematch immediately, for some reason.</span></div>`):
- a&&a.type==='hero'?`<div class="actions"><button class="btn" onclick="commandHeroAct('basic')">Attack</button><button class="btn" onclick="commandHeroAct('skill')">AUTO SKILL</button><button class="btn" onclick="commandHeroAct('defend')">Defend</button><button class="btn" ${ri(a.rarity)<4?'disabled':''} onclick="commandHeroAct('ult')">Ultimate</button></div>`:'<div class="tiny">Enemy acting...</div>'}</div>`;
+ a&&a.type==='hero'?`<div class="actions"><button class="btn" onclick="commandHeroAct('attack')">Attack</button><button class="btn" onclick="commandHeroAct('defend')">Defend</button><button class="btn" ${ri(a.rarity)<4?'disabled':''} onclick="commandHeroAct('ult')">Ultimate</button></div>`:'<div class="tiny">Enemy acting...</div>'}</div>`;
 }
 function commandRender(){if(!S.command)return;if(S.command.context==='explore')renderExplore();else renderDungeons()}
 function closeCommand(){S.command=null;save();commandRender()}
