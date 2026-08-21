@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Echoes of Aether v0.7.6</title>
+<title>Echoes of Aether v0.7.7</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#090b13">
@@ -73,12 +73,36 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 .skillSocket{border:1px solid #ffffff16;border-radius:10px;padding:7px;text-align:center;background:#ffffff05}
 .skillDetailStats{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin:7px 0}
 .skillDetailStat{border:1px solid #ffffff12;border-radius:8px;padding:6px;text-align:center}
+
+/* Mobile-game interaction layer */
+html,body,#app,#app *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+input,textarea,select,[contenteditable="true"]{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  -webkit-touch-callout:default!important;
+}
+img{
+  -webkit-user-drag:none;
+  user-drag:none;
+  pointer-events:none;
+}
+button,.btn,.building,.gear,.skillBubble,.formcell{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.skillBubble{
+  touch-action:none!important;
+}
 </style>
 </head>
 <body>
 <div id="app">
 <header>
-<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.6 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
+<div class="brand"><b>ECHOES OF AETHER</b><span>v0.7.7 • FIXES • ADV Lv.<span id="plv">1</span></span></div>
 <div class="money"><span class="pill">💰 <b id="gold">0</b></span><span class="pill">💎 <b id="gems">0</b></span><span class="pill">📚 <b id="codexTop">0</b></span><span class="pill">✨ <b id="dust">0</b></span></div>
 </header>
 <main>
@@ -98,6 +122,19 @@ h2,h3,p{margin:0}h2{font-size:17px}h3{font-size:12px}.mut{font-size:9px;color:va
 </div>
 <div id="modal" class="modal"></div>
 <script>
+document.addEventListener('contextmenu',e=>{
+  if(e.target.closest && e.target.closest('#app'))e.preventDefault();
+},{capture:true});
+document.addEventListener('selectstart',e=>{
+  if(e.target.closest && e.target.closest('#app') &&
+     !e.target.closest('input,textarea,select,[contenteditable="true"]'))e.preventDefault();
+},{capture:true});
+document.addEventListener('dragstart',e=>{
+  if(e.target.closest && e.target.closest('#app') &&
+     !e.target.closest('.skillBubble'))e.preventDefault();
+},{capture:true});
+
+
 const RS=['Common','Uncommon','Rare','Epic','Mythic','Legendary','World','God'];
 const RM={Common:1,Uncommon:1.20,Rare:1.50,Epic:1.90,Mythic:2.50,Legendary:3.30,World:4.40,God:6.00};
 const CLASS={
@@ -339,14 +376,29 @@ function autoPriority(id){let l=ensureLoadout(id);l.active.sort((a,b)=>(skillObj
 const SKILL_ICONS={Bleed:'🩸',Poison:'☠️',Burn:'🔥',Stagger:'💫',Heal:'✚',Guard:'🛡️',Block:'🛡️',Magic:'🔮',Mana:'💠',Ranged:'🏹',WeakPoint:'🎯',Melee:'⚔️',Evasion:'🌫️',Revive:'✨',Crit:'💥',Support:'🌟',Faith:'✦'};
 function skillIcon(s){for(let t of s.tags||[])if(SKILL_ICONS[t])return SKILL_ICONS[t];return s.type==='Ultimate'?'🌠':s.type==='Passive'?'◆':s.type==='Reaction'?'↯':'✦'}
 function repairSkillLoadout(id){
- let l=ensureSkillLoadout(id),pool=heroSkillPool(id),valid=new Set(pool.map(s=>s.id)),max=loadoutSlotsFor(heroObj(id).rarity);
- l.active=(l.active||[]).filter(x=>valid.has(x)&&skillById(x)).slice(0,max);
- for(let s of pool.filter(s=>s.type==='Active'))if(l.active.length<max&&!l.active.includes(s.id))l.active.push(s.id);
- for(let k of ['ultimate','passive','reaction'])if(l[k]&&!valid.has(l[k]))l[k]=null;
- if(!l.ultimate)l.ultimate=(pool.find(s=>s.type==='Ultimate')||{}).id||null;
- if(!l.passive)l.passive=(pool.find(s=>s.type==='Passive')||{}).id||null;
- if(!l.reaction)l.reaction=(pool.find(s=>s.type==='Reaction')||{}).id||null;
- save();return l;
+ let l=ensureSkillLoadout(id),pool=heroSkillPool(id),max=loadoutSlotsFor(heroObj(id).rarity);
+ let activePool=pool.filter(s=>s&&s.type==='Active'&&s.id&&s.name);
+ let valid=new Set(activePool.map(s=>s.id));
+ let normalized=[];
+ for(let raw of (l.active||[])){
+   let sid=typeof raw==='string'?raw:(raw&&raw.id);
+   if(sid&&valid.has(sid)&&skillById(sid)&&!normalized.includes(sid))normalized.push(sid);
+ }
+ l.active=normalized.slice(0,max);
+ for(let s of activePool){
+   if(l.active.length>=max)break;
+   if(!l.active.includes(s.id))l.active.push(s.id);
+ }
+ for(let k of ['ultimate','passive','reaction']){
+   let raw=l[k],sid=typeof raw==='string'?raw:(raw&&raw.id);
+   let sk=sid?skillById(sid):null;
+   l[k]=(sk&&sk.name)?sid:null;
+ }
+ if(!l.ultimate)l.ultimate=(pool.find(s=>s&&s.type==='Ultimate'&&s.id&&s.name)||{}).id||null;
+ if(!l.passive)l.passive=(pool.find(s=>s&&s.type==='Passive'&&s.id&&s.name)||{}).id||null;
+ if(!l.reaction)l.reaction=(pool.find(s=>s&&s.type==='Reaction'&&s.id&&s.name)||{}).id||null;
+ save();
+ return l;
 }
 S.dragSkill=S.dragSkill||null;
 function skillDragStart(hero,sid){S.dragSkill={hero,sid};let e=document.querySelector(`[data-skill="${sid}"]`);if(e)e.classList.add('dragging')}
@@ -364,7 +416,7 @@ function skillTouchHold(hero,sid,el){
  el.addEventListener('touchmove',move,{passive:true});el.addEventListener('touchend',end,{once:true});
 }
 function skillBubbleHTML(hero,s,eq=false,i=0){
- if(!s)return'';
+ if(!s||!s.id||!s.name)return'';
  return`<div class="skillBubbleWrap"><button class="skillBubble ${eq?'equipped':''}" data-skill="${s.id}" draggable="${eq}" onclick="openSkillDetail('${hero}','${s.id}')" ondragstart="skillDragStart('${hero}','${s.id}')" ondragover="event.preventDefault()" ondrop="skillDrop('${hero}','${s.id}')" ondragend="skillDragEnd()" ontouchstart="${eq?`skillTouchHold('${hero}','${s.id}',this)`:''}">${eq?`<span class="prio">${i+1}</span>`:''}<span>${skillIcon(s)}</span><span class="lvl">Lv.${skillLevel(s.id)}</span></button><div class="skillBubbleName">${s.name}</div></div>`;
 }
 function openSkillDetail(hero,sid){
